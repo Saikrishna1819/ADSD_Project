@@ -202,25 +202,83 @@ def taskScreen():
         lbl4.grid(row=3, column=0)
         entry4 = Entry(update_window, textvariable=manager_name_var)
         entry4.grid(row=3, column=1)
-
+        
         def saveChanges():
-                updated_project_name = project_name_var.get()
-                updated_start_date = start_date_var.get()
-                updated_end_date = end_date_var.get()
-                updated_manager_name = manager_name_var.get()
+            updated_project_name = project_name_var.get()
+            updated_start_date = start_date_var.get()
+            updated_end_date = end_date_var.get()
+            updated_manager_name = manager_name_var.get()
 
-                cursor.execute("""
+            cursor.execute("""
                     UPDATE tasks
                     SET project_name=?, start_date=?, end_date=?, manager_name=?
                     WHERE id=?
                 """, (updated_project_name, updated_start_date, updated_end_date, updated_manager_name, task_id))
 
-                db.commit()
-                update_window.destroy()
-                taskScreen()
+            db.commit()
+            update_window.destroy()
+            taskScreen()
 
         btn_save = Button(update_window, text="Save Changes", command=saveChanges)
         btn_save.grid(row=4, column=0, columnspan=2, pady=10)
+
+
+
+
+    def searchProjects():
+        search_query = search_var.get().lower()
+        cursor.execute("SELECT * FROM tasks WHERE LOWER(project_name) LIKE ? OR LOWER(start_date) LIKE ? OR LOWER(end_date) LIKE ? OR LOWER(manager_name) LIKE ?", 
+                       ('%' + search_query + '%', '%' + search_query + '%', '%' + search_query + '%', '%' + search_query + '%'))
+        results = cursor.fetchall()
+
+        # Clear the existing entries on the screen
+        for widget in window.winfo_children():
+            widget.destroy()
+
+        # Display the search results
+        displayProjects(results)
+
+    def displayProjects(projects):
+       
+        lbl_project_name = Label(window, text="Project Name", font=("Arial", 12))
+        lbl_project_name.grid(row=2, column=0, padx=40)
+        lbl_start_date = Label(window, text="Start Date", font=("Arial", 12))
+        lbl_start_date.grid(row=2, column=1, padx=80)
+        lbl_end_date = Label(window, text="End Date", font=("Arial", 12))
+        lbl_end_date.grid(row=2, column=2, padx=80)
+        lbl_manager_name = Label(window, text="Manager Name", font=("Arial", 12))
+        lbl_manager_name.grid(row=2, column=3, padx=80)
+
+        # Display projects
+        for i, project in enumerate(projects, start=3):
+            lbl1 = Label(window, text=project[1], font=("Arial", 12))
+            lbl1.grid(column=0, row=i)
+            lbl2 = Label(window, text=project[2], font=("Arial", 12))
+            lbl2.grid(column=1, row=i)
+            lbl3 = Label(window, text=project[3], font=("Arial", 12))
+            lbl3.grid(column=2, row=i)
+            lbl4 = Label(window, text=project[4], font=("Arial", 12))
+            lbl4.grid(column=3, row=i)
+
+            # Buttons for delete and update
+            btn_delete = Button(window, text="Delete", command=partial(removeEntry, project[0]))
+            btn_delete.grid(column=4, row=i, pady=10, padx=50)
+
+            btn_update = Button(window, text="Update", command=lambda p=project[0]: updateEntry(p))
+            btn_update.grid(column=5, row=i, pady=10, padx=50)
+
+    # Add a search bar and button
+    search_var = StringVar()
+    search_entry = Entry(window, textvariable=search_var, width=30)
+    search_entry.grid(row=1, column=1, padx=10, pady=10)
+
+    search_button = Button(window, text="Search", command=searchProjects)
+    search_button.grid(row=1, column=2, pady=10)
+
+    # Display all projects initially
+    cursor.execute('SELECT * FROM tasks')
+    displayProjects(cursor.fetchall())
+
 
 
 
@@ -228,7 +286,7 @@ def taskScreen():
     window.geometry('800x800')
     window.resizable(height=None, width=None)
     lbl = Label(window, text="Project Manager", font=("Arial", 20))
-    lbl.grid(column=1)
+    lbl.grid(row=1)
     lbl.config(anchor=CENTER)
     
     btn = Button(window, text="Add a New Project", command=addEntry)
